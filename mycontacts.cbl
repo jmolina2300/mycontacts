@@ -5,7 +5,7 @@
        INPUT-OUTPUT SECTION.
            FILE-CONTROL.
            SELECT CONTACT ASSIGN TO "CONTACTS.txt"
-           ORGANIZATION IS LINE SEQUENTIAL
+           ORGANIZATION IS SEQUENTIAL
            ACCESS IS SEQUENTIAL
            FILE STATUS IS WS-FILESTATUS.
 
@@ -15,15 +15,15 @@
 
            01  FS-PERSON.
                02 FS-NAME.
-                   03 FS-FIRSTNAME          PIC A(10).
-                   03 FS-LASTNAME           PIC A(10).
+                   05 FS-FIRSTNAME          PIC A(10).
+                   05 FS-LASTNAME           PIC A(10).
                02 FS-PHONENUMBER            PIC 9(10).
 
        WORKING-STORAGE SECTION.
            01  WS-PERSON.
                02 WS-NAME.
-                   03 WS-FIRSTNAME          PIC A(10).
-                   03 WS-LASTNAME           PIC A(10).
+                   05 WS-FIRSTNAME          PIC A(10).
+                   05 WS-LASTNAME           PIC A(10).
                02 WS-PHONENUMBER            PIC 9(10).
            01  WS-FILESTATUS     PIC 99.
            01  CHOICE PIC 9.
@@ -61,10 +61,13 @@
        ACCEPT WS-LASTNAME.
        DISPLAY "Phone number: ".
        ACCEPT WS-PHONENUMBER.
-      
-       OPEN EXTEND  CONTACT.
+
+       OPEN EXTEND CONTACT.
        IF WS-FILESTATUS IS NOT EQUAL 0
            OPEN OUTPUT CONTACT
+       END-IF.
+       IF WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "File error: " WS-FILESTATUS
        END-IF.
 
        MOVE WS-PERSON TO FS-PERSON.
@@ -80,14 +83,17 @@
       ******************************************************************
        LIST-CONTACTS.
        OPEN INPUT CONTACT.
+       IF  WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "No contacts to list"
+           EXIT PARAGRAPH
+       END-IF.
        PERFORM UNTIL WS-FILESTATUS = 10
            READ CONTACT INTO WS-PERSON
-           AT END MOVE 10 TO WS-FILESTATUS
+           AT END MOVE 10 TO WS-FILESTATUS 
            NOT AT END DISPLAY WS-FIRSTNAME "  " WS-PHONENUMBER
            END-READ
        END-PERFORM.
        CLOSE CONTACT.
 
-       
-       DELETE-CONTACT.
 
+       DELETE-CONTACT.
