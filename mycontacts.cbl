@@ -9,6 +9,11 @@
            ACCESS IS SEQUENTIAL
            FILE STATUS IS WS-FILESTATUS.
 
+           SELECT SEL-CONTACT ASSIGN TO "TEMP"
+           ORGANIZATION IS SEQUENTIAL
+           ACCESS IS SEQUENTIAL
+           FILE STATUS IS WS-FILESTATUS.
+
        DATA DIVISION.
            FILE SECTION.
            FD  CONTACT.
@@ -19,6 +24,14 @@
                    05 FS-LASTNAME           PIC A(10).
                02 FS-PHONENUMBER            PIC 9(10).
 
+           FD  SEL-CONTACT.
+           01 FS-SEL-PERSON.
+               02 FS-SEL-NAME.
+                   05 FS-SEL-FIRSTNAME          PIC A(10).
+                   05 FS-SEL-LASTNAME           PIC A(10).
+               02 FS-SEL-PHONENUMBER            PIC 9(10).
+
+
        WORKING-STORAGE SECTION.
            01  WS-PERSON.
                02 WS-NAME.
@@ -27,6 +40,8 @@
                02 WS-PHONENUMBER            PIC 9(10).
            01  WS-FILESTATUS     PIC 99.
            01  CHOICE PIC 9.
+
+           01 WS-SEL-CONTACT                PIC A(10).
 
 
 
@@ -90,10 +105,89 @@
        PERFORM UNTIL WS-FILESTATUS = 10
            READ CONTACT INTO WS-PERSON
            AT END MOVE 10 TO WS-FILESTATUS 
-           NOT AT END DISPLAY WS-FIRSTNAME "  " WS-PHONENUMBER
+           NOT AT END DISPLAY " " WS-FIRSTNAME "  " WS-PHONENUMBER
            END-READ
        END-PERFORM.
        CLOSE CONTACT.
 
 
+       TRANSFER-CONTACT.
+           MOVE FS-PERSON TO FS-SEL-PERSON.
+           WRITE FS-SEL-PERSON
+           END-WRITE.
+
        DELETE-CONTACT.
+       DISPLAY "Contact to delete: ".
+       ACCEPT WS-SEL-CONTACT.
+      * OPEN THE CONTACT FILE FOR READING
+       OPEN INPUT CONTACT.
+       IF  WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "No contacts"
+           EXIT PARAGRAPH
+       END-IF.
+
+      * OPEN THE TEMPORARY FILE FOR WRITING
+       OPEN OUTPUT SEL-CONTACT
+       IF  WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "ERROR CREATING TEMPORARY FILE"
+           CLOSE CONTACT
+           EXIT PARAGRAPH
+       END-IF.
+
+       PERFORM UNTIL WS-FILESTATUS = 10
+           READ CONTACT INTO WS-PERSON
+           AT END 
+               MOVE 10 TO WS-FILESTATUS 
+           NOT AT END
+
+      * Copy the contact to the temporary file if we want to keep it
+           IF WS-FIRSTNAME NOT EQUAL WS-SEL-CONTACT
+           PERFORM TRANSFER-CONTACT
+           END-IF
+
+           END-READ
+       END-PERFORM.
+       CLOSE CONTACT.
+       CLOSE SEL-CONTACT.
+
+      * DELETE the CONTACTS FILE AND COPY over the stuff we want
+      * OPEN THE CONTACT FILE FOR WRITING
+       OPEN OUTPUT CONTACT.
+       IF  WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "No contacts file to remove"
+           EXIT PARAGRAPH
+       END-IF.
+
+      * OPEN THE TEMPORARY FILE FOR READING
+       OPEN INPUT SEL-CONTACT
+       IF  WS-FILESTATUS IS NOT EQUAL 0
+           DISPLAY "ERROR FINDING TEMPORARY FILE!"
+           CLOSE CONTACT
+           EXIT PARAGRAPH
+       END-IF.
+       
+       DISPLAY " ".
+       DISPLAY "UPDATED CONTACT LIST: ".
+       PERFORM UNTIL WS-FILESTATUS = 10
+           READ SEL-CONTACT INTO WS-PERSON
+           AT END 
+               MOVE 10 TO WS-FILESTATUS 
+           NOT AT END
+
+           DISPLAY " " WS-FIRSTNAME "  " WS-PHONENUMBER
+      
+      * Transfer the current CONTACT TO the main contact buffer
+           MOVE FS-SEL-PERSON TO FS-PERSON
+           WRITE FS-PERSON
+           END-WRITE
+
+           END-READ
+       END-PERFORM.
+       CLOSE CONTACT.
+       CLOSE SEL-CONTACT.
+
+
+
+       
+
+
